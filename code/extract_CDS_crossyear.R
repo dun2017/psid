@@ -5,18 +5,21 @@ library(naniar)
 library(mice)
 library(survey)
 
+in_dir <- 'C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/'
+out_dir <- 'C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/'
+
 ## Function to apply codebook and keep only those clean extracted variables.
 pull_main_wave <- function(y, cb) {
   message(paste0('Extracting ', y, '...'))
   ## Load full data and codebook.
-  full_cb <- as.data.table(readxl::read_excel('//sas/psc/dept/cboen_Proj/PSID/CDS/cds_crossyear_cb.xlsx',
+  full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"cds_crossyear_cb.xlsx"),
                                               sheet = 'Sheet1')) 
   # full_cb <- full_cb[!(var_rename %in% c('wealth','debt')) & wave==y, ]
   full_cb <- full_cb[wave==y, ]
   setnames(full_cb, 'wave', 'year')
   # d <- fread(paste0('//sas/psc/dept/cboen_Proj/PSID/Main File/data',y,'.csv'))
-  # missing_vars <- full_cb[!(var %in% names(d)), var]
-  # message(paste('Missing var:', missing_vars, collapse = ', '))
+  missing_vars <- full_cb[!(var %in% names(d)), var_rename]
+  message(paste('Missing var:', missing_vars, collapse = ', '))
   full_cb <- full_cb[var %in% names(d), ]
   ## Recode any raw variables that need recoding.
   for(v in full_cb[, var]) {
@@ -70,16 +73,24 @@ pull_main_wave <- function(y, cb) {
 
 ## Extract each year of TAS survey.
 main_years <- c(1997,2002,2007,2014)
-d <- fread('//sas/psc/dept/cboen_Proj/PSID/CDS/cds_crossyear.csv')
+d <- fread(paste0(in_dir,'cds_crossyear.csv'))
+## ADD ADDENDUMS
+d2 <- fread(paste0(in_dir,'cds_crossyear_update_dec1.csv'))
+full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"cds_crossyear_cb.xlsx"),
+                                            sheet = 'Sheet1')) 
+update_vars <- full_cb[var_rename %in% c('hospital_visits','parenting_strain','family_calm_discuss','behind_bills','money_left'), var]
+d2 <- d2[, c('ER30001','ER30002',update_vars), with=F]
+d <- merge(d, d2, by=c('ER30001','ER30002'))
+################
 all <- rbindlist(lapply(main_years, pull_main_wave), fill=T)
 ## FIX CDS YEAR DISCREPANCIES
 all[year==1997, year := 1999]
 all[year==2002, year := 2001]
 all[year==2014, year := 2013]
-write.csv(all, '//sas/psc/dept/cboen_Proj/PSID/CLEAN_DATA/cds.csv', row.names = F)
+write.csv(all, paste0(out_dir, 'cds.csv'), row.names = F)
 
 # all <- fread('//sas/psc/dept/cboen_Proj/PSID/CLEAN_DATA/individual_family.csv')
 # all[, id := ER30001*1000+ER30002]
 # all[, n := .N, by='id']
 table(all[, c('year','bmi')], useNA = 'always')
-all[, mean(bmi,na.rm=T), by='year']
+all[, mean(behind_bills,na.rm=T), by='year']

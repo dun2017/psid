@@ -5,12 +5,14 @@ library(naniar)
 library(mice)
 library(survey)
 
+in_dir <- 'C:/Users/ngraetz/Downloads/'
+out_dir <- 'C:/Users/ngraetz/Dropbox/Penn/papers/psid/'
+
 ## Function to apply codebook and keep only those clean extracted variables.
 pull_main_wave <- function(y, cb) {
   message(paste0('Extracting ', y, '...'))
   ## Load full data and codebook.
-  full_cb <- as.data.table(readxl::read_excel('//sas/psc/dept/cboen_Proj/PSID/Main File/codebook_main_file_v4.xlsx',
-                                              sheet = 'Sheet1')) 
+  full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"codebook_main_file_v4.xlsx"),sheet = 'Sheet1')) 
   # full_cb <- full_cb[!(var_rename %in% c('wealth','debt')) & wave==y, ]
   full_cb <- full_cb[wave==y, ]
   setnames(full_cb, 'wave', 'year')
@@ -70,17 +72,17 @@ pull_main_wave <- function(y, cb) {
 
 ## Extract each year of TAS survey.
 main_years <- c(1999,2001,2003,2005,2007,2009,2011,2013,2015,2017)
-d <- fread('//sas/psc/dept/cboen_Proj/PSID/Main File/crossyear.csv')
+d <- fread(paste0(in_dir,'crossyear.csv'))
 
 ################################################################################################################
 ## ADD ADDENDUMS TO RAW MAIN FILE HERE
 ################################################################################################################
-d_add <- fread("//sas/psc/dept/cboen_Proj/PSID/Main File/J266762/J266762.csv")
-new_names <- names(d_add)[!(names(d_add) %in% names(d))] # Add only new variables from this new download.
-d <- merge(d, d_add[, c('ER30001','ER30002',new_names), with=F], by=c('ER30001','ER30002'))
+# d_add <- fread("//sas/psc/dept/cboen_Proj/PSID/Main File/J266762/J266762.csv")
+# new_names <- names(d_add)[!(names(d_add) %in% names(d))] # Add only new variables from this new download.
+# d <- merge(d, d_add[, c('ER30001','ER30002',new_names), with=F], by=c('ER30001','ER30002'))
 ################################################################################################################
 
 ## EXTRACT ALL
 all <- rbindlist(lapply(main_years, pull_main_wave), fill=T)
-write.csv(all, '//sas/psc/dept/cboen_Proj/PSID/CLEAN_DATA/individual_family.csv', row.names = F)
+write.csv(all, paste0(out_dir, 'individual_family.csv'), row.names = F)
 
