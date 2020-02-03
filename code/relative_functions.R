@@ -15,6 +15,11 @@ get_relation_ids <- function(ind_ids, relation) {
   return(relation_ids)
 }
 
+# get_ref_ids <- function(ind_ids) {
+#   rel <- fread("C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/clean_relations.csv")
+#   rel <- rel[rel_alter_ref=='self', ]
+# }
+
 merge_relative_data <- function(d,relation,relation_vars,relation_male=NULL) {
   
   ## Load clean relationship matrix

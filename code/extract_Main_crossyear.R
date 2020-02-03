@@ -71,10 +71,9 @@ pull_main_wave <- function(y, cb) {
 }
 
 ## Extract each year of TAS survey.
-main_years <- c(1999,2001,2003,2005,2007,2009,2011,2013,2015,2017)
+main_years <- c(1994,1999,2001,2003,2005,2007,2009,2011,2013,2015,2017)
 d <- fread(paste0(in_dir,'crossyear.csv'))
-full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"codebook_main_file_v5.xlsx"),
-                                            sheet = 'Sheet1')) 
+full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"codebook_main_file_v5.xlsx"), sheet = 'Sheet1')) 
 full_cb[, var := gsub(' ','',var)]
 
 ################################################################################################################
@@ -101,30 +100,39 @@ all <- rbindlist(lapply(main_years, pull_main_wave), fill=T)
 ## 2019 CPI https://cpiinflationcalculator.com/historical-tables/
 ## With equity
 all[, fam_wealth_weq := as.double(fam_wealth_weq)]
+all[year==1994, fam_wealth_weq := fam_wealth_weq*160.5/244.979]
 all[year==1999, fam_wealth_weq := fam_wealth_weq*166.6/244.979]
 all[year==2001, fam_wealth_weq := fam_wealth_weq*177.1/244.979]
 all[year==2007, fam_wealth_weq := fam_wealth_weq*207.342/244.979]
 all[year==2009, fam_wealth_weq := fam_wealth_weq*214.537/244.979]
 all[year==2011, fam_wealth_weq := fam_wealth_weq*224.939/244.979]
 all[year==2013, fam_wealth_weq := fam_wealth_weq*232.957/244.979]
+all[year==2015, fam_wealth_weq := fam_wealth_weq*236.525/244.979]
+all[year==2017, fam_wealth_weq := fam_wealth_weq*244.979/244.979]
 all[, fam_wealth_weq := fam_wealth_weq/(family_size^0.55)]
 ## Without equity
 all[, fam_wealth_noeq := as.double(fam_wealth_noeq)]
+all[year==1994, fam_wealth_noeq := fam_wealth_noeq*160.5/244.979]
 all[year==1999, fam_wealth_noeq := fam_wealth_noeq*166.6/244.979]
 all[year==2001, fam_wealth_noeq := fam_wealth_noeq*177.1/244.979]
 all[year==2007, fam_wealth_noeq := fam_wealth_noeq*207.342/244.979]
 all[year==2009, fam_wealth_noeq := fam_wealth_noeq*214.537/244.979]
 all[year==2011, fam_wealth_noeq := fam_wealth_noeq*224.939/244.979]
 all[year==2013, fam_wealth_noeq := fam_wealth_noeq*232.957/244.979]
+all[year==2015, fam_wealth_noeq := fam_wealth_noeq*236.525/244.979]
+all[year==2017, fam_wealth_noeq := fam_wealth_noeq*244.979/244.979]
 all[, fam_wealth_noeq := fam_wealth_noeq/(family_size^0.55)]
 ## Family income
 all[, fam_income := as.double(fam_income)]
+all[year==1994, fam_income := fam_income*160.5/244.979]
 all[year==1999, fam_income := fam_income*166.6/244.979]
 all[year==2001, fam_income := fam_income*177.1/244.979]
 all[year==2007, fam_income := fam_income*207.342/244.979]
 all[year==2009, fam_income := fam_income*214.537/244.979]
 all[year==2011, fam_income := fam_income*224.939/244.979]
 all[year==2013, fam_income := fam_income*232.957/244.979]
+all[year==2015, fam_income := fam_income*236.525/244.979]
+all[year==2017, fam_income := fam_income*244.979/244.979]
 ## SAVE CLEAN DATASET
-write.csv(all, paste0(out_dir, 'individual_family.csv'), row.names = F)
+write.csv(all, paste0(out_dir, 'individual_family2.csv'), row.names = F)
 

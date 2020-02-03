@@ -5,9 +5,22 @@ source(paste0(repo,'code/relative_functions.R'))
 in_dir <- 'C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/'
 
 ## Merge TAS and individual-family main file by master ids: ER30001, ER30002
-main <- fread(paste0(in_dir,'individual_family_v2.csv'))
-main <- main[!is.na(fam_wealth_weq), ] # I thiiiink this subsets to HoH, with virtually no missingness on wealth variables.
+main <- fread(paste0(in_dir,'individual_family2.csv'))
+# main <- main[!is.na(fam_wealth_weq), ] # I thiiiink this subsets to HoH, with virtually no missingness on wealth variables.
+main[, ref_id := ER30001*1000+ER30002]
 main[, id := ER30001*1000+ER30002]
+## Create lagged wealth
+main <- main[order(id,year)]
+for(v in c('fam_wealth_noeq','fam_wealth_weq','fam_income')) main[, (paste0('l.',v)) := data.table::shift(get(v)), by=c('id')]
+
+## Grab reference person ids and keep only reference people
+rel <- fread("C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/clean_relations.csv")
+rel <- rel[rel_alter_ref=='self', ]
+rel[, id := ego_68_id*1000+ego_pid]
+rel[, ref_id := alter_68_id*1000+alter_pid]
+# main <- main[ref_id %in% rel[, ref_id], ]
+
+## Read CDS, tack on TAS to age 18, and merge by reference person to main file
 cds <- fread(paste0(in_dir,"cds.csv"))
 cds_vars <- names(cds)[!(names(cds) %in% c('ER30001','ER30002','year'))]
 setnames(cds, cds_vars, paste0('cds_', cds_vars))
@@ -15,17 +28,24 @@ cds[, id := ER30001*1000+ER30002]
 original_cds_cohort <- cds[year==1999, id]
 cds <- cds[id %in% original_cds_cohort, ]
 cds <- cds[year != 2013, ]
-## Append TAS to CDS where respondents overlap
-# tas <- fread("C:/Users/ngraetz/Documents/repos/psid/code/clean_TAS.csv")
 tas <- fread('C:/Users/ngraetz/Downloads/merged_MAIN_TAS.csv')
 tas[, id := ER30001*1000+ER30002]
 tas <- tas[id %in% original_cds_cohort, ]
-tas <- tas[, c('ER30001','ER30002','year','id','tas_bmi')]
-setnames(tas, 'tas_bmi', 'cds_bmi')
+tas <- tas[, c('ER30001','ER30002','year','id','tas_bmi','tas_srh')]
+setnames(tas, c('tas_srh','tas_bmi'), c('cds_srh','cds_bmi'))
 tas <- tas[!(year %in% c(2005,2007)), ]
 cds_tas <- rbind(cds, tas, fill=T)
-
-all <- merge(main, cds_tas, by=c('ER30001','ER30002','year','id'))
+## This will also subset out years where people weren't in the sample.
+cds_tas <- merge(rel[, c('id','ref_id','year')], cds_tas, by=c('id','year'), all.x=T)
+## Merge reference person variables (e.g. wealth) from main file to each CDS individual
+main_ref_vars <- c("fam_wealth_noeq","fam_wealth_weq","head_race","fam_income",
+                   "l.fam_wealth_noeq","l.fam_wealth_weq","l.fam_income",
+                   "childcare_exp","education_exp","healthcare_exp","housing_exp","marital_status","family_size")
+all <- merge(main[, c('year','ref_id',main_ref_vars), with=F], cds_tas, by=c('year','ref_id'), all.x=T)
+## Merge any other ego variables we need for the CDS individual from the main file (age, gender)
+main_cds_vars <- c('age','male')
+## Keep all main records, lag income and wealth, and then subset
+all <- merge(all, main[, c('year','id',main_cds_vars), with=F], by=c('year','id'), all.x=T)
 
 ## Subset to just those children interviewed in 1997
 original_cds_cohort <- all[year==1999 & !is.na(age), id]
@@ -70,8 +90,8 @@ all[, birth_order := total_children - younger_than_ego + 1]
 #                            relation_vars=c('age')) 
 
 ## Save final dataset
-write.csv(all, paste0(in_dir,'merged_MAIN_CDS.csv'))
-all <- fread(paste0(in_dir,'merged_MAIN_CDS.csv'))
+write.csv(all, paste0(in_dir,'merged_MAIN_CDS2.csv'))
+all <- fread(paste0(in_dir,'merged_MAIN_CDS2.csv'))
 
 ## Plots/tables
 # all <- fread(paste0(in_dir,'merged_MAIN_CDS.csv'))
