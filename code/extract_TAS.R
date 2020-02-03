@@ -62,3 +62,5 @@ pull_tas_wave <- function(y, cb) {
 tas_years <- c(2005,2007,2009,2011,2013,2015,2017)
 all <- rbindlist(lapply(tas_years, pull_tas_wave), fill=T)
 write.csv(all, '//sas/psc/dept/cboen_Proj/Hannah/Data/clean_TAS.csv', row.names = F)
+
+

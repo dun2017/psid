@@ -25,6 +25,7 @@ merge_relative_data <- function(d,relation,relation_vars,relation_male=NULL) {
   ## Load clean relationship matrix
   rel <- fread("C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/clean_relations.csv")
   
+  relation_vars <- relation_vars[relation_vars!='male']
   ## Load full clean individual-family file
   all <- fread('C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/individual_family_v2.csv')
   setnames(all, c('ER30001','ER30002'), c('ego_68_id','ego_pid'))
@@ -43,7 +44,9 @@ merge_relative_data <- function(d,relation,relation_vars,relation_male=NULL) {
   ## I think the above is wrong... we want to merge ego id (the parent) to full data and keep alter id to merge on to target data
   all <- merge(all, ego_rel[, c('year','ego_id','alter_id')], by=c('year','ego_id'))
   if(!is.null(relation_male)) all <- all[male==relation_male, ]
-  all[, male := NULL]
+  # all[, male := NULL]
+  relation_vars <- c(relation_vars,'male')
+  setnames(all, 'male', paste0('male_',relation))
   
   ## Reshape wide on number of relations (in case many siblings)
   rel_numbers <- unique(all[, c('ego_id','alter_id')])
@@ -51,7 +54,8 @@ merge_relative_data <- function(d,relation,relation_vars,relation_male=NULL) {
   all <- merge(all, rel_numbers, by=c('ego_id','alter_id'))
   unique_rels <- unique(all[, rel_number])
   all <- dcast(all, alter_id + year ~ rel_number, value.var = paste0(relation_vars,'_',relation))
-  setnames(all, c('ego_id','year',paste0(paste0(relation_vars,'_',relation,'_'), unique_rels)))
+  # setnames(all, c('ego_id','year',paste0(paste0(relation_vars,'_',relation,'_'), unique_rels)))
+  setnames(all, 'alter_id', 'ego_id')
   
   ## Merge target variables to provided data and return
   if(!('ego_id' %in% names(d))) d[, ego_id := ER30001*1000+ER30002]
