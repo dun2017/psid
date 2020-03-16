@@ -5,13 +5,13 @@ source(paste0(repo,'code/relative_functions.R'))
 in_dir <- 'C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/'
 
 ## Merge TAS and individual-family main file by master ids: ER30001, ER30002
-main <- fread(paste0(in_dir,'individual_family2.csv'))
+main <- fread(paste0(in_dir,'individual_family3.csv'))
 # main <- main[!is.na(fam_wealth_weq), ] # I thiiiink this subsets to HoH, with virtually no missingness on wealth variables.
 main[, ref_id := ER30001*1000+ER30002]
 main[, id := ER30001*1000+ER30002]
 ## Create lagged wealth
 main <- main[order(id,year)]
-for(v in c('fam_wealth_noeq','fam_wealth_weq','fam_income')) main[, (paste0('l.',v)) := data.table::shift(get(v)), by=c('id')]
+for(v in c('fam_wealth_noeq','fam_wealth_weq','fam_income','fam_debt','own_rent')) main[, (paste0('l.',v)) := data.table::shift(get(v)), by=c('id')]
 
 ## Grab reference person ids and keep only reference people
 rel <- fread("C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/clean_relations.csv")
@@ -21,11 +21,11 @@ rel[, ref_id := alter_68_id*1000+alter_pid]
 # main <- main[ref_id %in% rel[, ref_id], ]
 
 ## Read CDS, tack on TAS to age 18, and merge by reference person to main file
-cds <- fread(paste0(in_dir,"cds.csv"))
-cds_vars <- names(cds)[!(names(cds) %in% c('ER30001','ER30002','year'))]
+cds <- fread(paste0(in_dir,"cds_v3.csv"))
+cds_vars <- names(cds)[!(names(cds) %in% c('ER30001','ER30002','year','cds_year'))]
 setnames(cds, cds_vars, paste0('cds_', cds_vars))
 cds[, id := ER30001*1000+ER30002]
-original_cds_cohort <- cds[year==1999, id]
+original_cds_cohort <- cds[cds_year==1997, id]
 cds <- cds[id %in% original_cds_cohort, ]
 cds <- cds[year != 2013, ]
 tas <- fread('C:/Users/ngraetz/Downloads/merged_MAIN_TAS.csv')
@@ -36,19 +36,24 @@ setnames(tas, c('tas_srh','tas_bmi'), c('cds_srh','cds_bmi'))
 tas <- tas[!(year %in% c(2005,2007)), ]
 cds_tas <- rbind(cds, tas, fill=T)
 ## This will also subset out years where people weren't in the sample.
-cds_tas <- merge(rel[, c('id','ref_id','year')], cds_tas, by=c('id','year'), all.x=T)
+# cds_tas <- merge(rel[, c('id','ref_id','year')], cds_tas, by=c('id','year'), all.x=T)
+cds_tas <- merge(cds_tas, rel[, c('id','ref_id','year')], by=c('id','year'), all.x=T)
 ## Merge reference person variables (e.g. wealth) from main file to each CDS individual
 main_ref_vars <- c("fam_wealth_noeq","fam_wealth_weq","head_race","fam_income",
+                   'fam_debt','l.fam_debt','own_rent','l.own_rent',
                    "l.fam_wealth_noeq","l.fam_wealth_weq","l.fam_income",
                    "childcare_exp","education_exp","healthcare_exp","housing_exp","marital_status","family_size")
-all <- merge(main[, c('year','ref_id',main_ref_vars), with=F], cds_tas, by=c('year','ref_id'), all.x=T)
+# all <- merge(main[, c('year','ref_id',main_ref_vars), with=F], cds_tas, by=c('year','ref_id'), all.x=T)
+all <- merge(cds_tas, main[, c('year','ref_id',main_ref_vars), with=F], by=c('year','ref_id'), all.x=T)
 ## Merge any other ego variables we need for the CDS individual from the main file (age, gender)
 main_cds_vars <- c('age','male')
 ## Keep all main records, lag income and wealth, and then subset
 all <- merge(all, main[, c('year','id',main_cds_vars), with=F], by=c('year','id'), all.x=T)
-
+## Correct age variable (only variable merging from main that we DONT want to be lagged value).
+all[, age := age + (cds_year-year)]
+table(all[, c('head_race','age')])
 ## Subset to just those children interviewed in 1997
-original_cds_cohort <- all[year==1999 & !is.na(age), id]
+original_cds_cohort <- all[cds_year==1997 & !is.na(age), id]
 all <- all[id %in% original_cds_cohort, ]
 all <- all[age<=18, ]
 # all[, mean(cds_depression,na.rm=T), by='year']
@@ -90,8 +95,8 @@ all[, birth_order := total_children - younger_than_ego + 1]
 #                            relation_vars=c('age')) 
 
 ## Save final dataset
-write.csv(all, paste0(in_dir,'merged_MAIN_CDS2.csv'))
-all <- fread(paste0(in_dir,'merged_MAIN_CDS2.csv'))
+write.csv(all, paste0(in_dir,'merged_MAIN_CDS5.csv'))
+all <- fread(paste0(in_dir,'merged_MAIN_CDS5.csv'))
 
 ## Plots/tables
 # all <- fread(paste0(in_dir,'merged_MAIN_CDS.csv'))

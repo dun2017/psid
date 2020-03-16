@@ -53,6 +53,7 @@ merge_relative_data <- function(d,relation,relation_vars,relation_male=NULL) {
   rel_numbers[, rel_number := 1:.N, by='alter_id']
   all <- merge(all, rel_numbers, by=c('ego_id','alter_id'))
   unique_rels <- unique(all[, rel_number])
+  all <- all[order(year,ego_id,alter_id)]
   all <- dcast(all, alter_id + year ~ rel_number, value.var = paste0(relation_vars,'_',relation))
   # setnames(all, c('ego_id','year',paste0(paste0(relation_vars,'_',relation,'_'), unique_rels)))
   setnames(all, 'alter_id', 'ego_id')

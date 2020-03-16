@@ -1,0 +1,14 @@
+actual_inc,age,family,tc_vars,tv_vars,update_vars
+2,2,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_2,fam_income_sd_1,fam_wealth_weq_sd_1",cds_economic_strain_2
+2,2,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_2,fam_income_sd_1,fam_wealth_weq_sd_1",cds_parenting_strain_2
+2,2,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_2,fam_income_sd_1,fam_wealth_weq_sd_1",cds_bmi_sd_2
+5,3,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_3,cds_parenting_strain_2,cds_economic_strain_2,fam_income_sd_1,fam_wealth_weq_sd_1",fam_wealth_weq_sd_3
+5,3,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_3,fam_income_sd_1",fam_income_sd_3
+5,3,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_3,cds_parenting_strain_2,cds_economic_strain_2,fam_income_sd_3,fam_wealth_weq_sd_3",cds_parenting_strain_3
+5,3,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_3,cds_parenting_strain_2,cds_economic_strain_2,fam_income_sd_3,fam_wealth_weq_sd_3",cds_economic_strain_3
+5,3,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_3,fam_income_sd_1,fam_wealth_weq_sd_1",education_exp_3
+5,3,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_3,cds_parenting_strain_2,cds_economic_strain_2,education_exp_3,cds_bmi_sd_2,fam_income_sd_3,fam_wealth_weq_sd_3",cds_bmi_sd_3
+5,4,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_4,cds_parenting_strain_3,cds_economic_strain_3,fam_income_sd_3,fam_wealth_weq_sd_3",fam_wealth_weq_sd_4
+5,4,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_4,fam_income_sd_3",fam_income_sd_4
+5,4,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_3,fam_income_sd_3,fam_wealth_weq_sd_3",education_exp_4
+5,4,gaussian,"as.factor(male),as.factor(black),as.factor(college),as.factor(married),birth_order","actual_age_4,cds_parenting_strain_3,cds_economic_strain_3,education_exp_4,cds_bmi_sd_3,fam_income_sd_4,fam_wealth_weq_sd_4",cds_bmi_sd_4

@@ -4,6 +4,7 @@ library(lme4)
 library(lmerTest)
 library(mice)
 library(miceadds)
+library(mitools)
 
 repo <- 'C:/Users/ngraetz/Documents/repos/psid/'
 source(paste0(repo,'code/relative_functions.R'))
@@ -17,7 +18,7 @@ old[, head_race := factor(head_race, levels = c('white','black'))]
 ## Drop no child weights right away (this gets rids of censored years, we don't want to impute these)
 old <- old[cds_child_weight!=0 & !is.na(cds_child_weight),]
 
-all2 <- fread(paste0(in_dir,'merged_MAIN_CDS2.csv'))
+all2 <- fread(paste0(in_dir,'merged_MAIN_CDS4.csv'))
 all2 <- all2[head_race %in% c('white','black'),]
 all2[, head_race := factor(head_race, levels = c('white','black'))]
 ## Drop no child weights right away (this gets rids of censored years, we don't want to impute these)
@@ -25,12 +26,13 @@ all2[, head_race := factor(head_race, levels = c('white','black'))]
 ## FEB 6 EDITS TO NOT DROP ZERO WEIGHTS
 # all2 <- all2[cds_child_weight!=0 & !is.na(cds_child_weight),]
 ## TRY TO KEEP ANY IDS THAT HAVE NON-ZERO WEIGHTS IN FIRST CDS YEAR 1999
-all2[, keep := ifelse(year==1999 & cds_child_weight!=0 & !is.na(cds_child_weight),1,0),]
+all2[, keep := ifelse(cds_year==1997 & cds_child_weight!=0 & !is.na(cds_child_weight),1,0),]
 all2[, keep := max(keep,na.rm=T), by='id']
-all2 <- all2[keep==1 & year>=1999, ]
+all2 <- all2[keep==1 & cds_year>=1997, ]
 test <- merge(old[,c('id','age','fam_wealth_weq')], all2[,c('id','age','fam_wealth_weq','l.fam_wealth_weq')], by=c('id','age'))
 ##########################################
 all <- copy(all2)
+all <- all[!is.na(fam_wealth_weq),] ## 1 observation
 
 ## Figure out how to normalize wealth
 ## Use a top and lower bound and then standardize?
@@ -120,30 +122,32 @@ all[, chronic_count := cds_allergies + cds_anemia + cds_asthma + cds_ear]
 # all[, mental := factor(mental, levels=c(0,1))]
 # all[, cds_depression := factor(cds_depression, levels=c(0,1))]
 all[, chronic := factor(chronic, levels=c(0,1))]
+all[, below1k := ifelse(fam_wealth_weq<1000,1,0)] ## 42% for Black compared to 17% for white
 
 # all[, n := 1]
 # traj <- all[, list(n=sum(n)), by='ego_id']
 # traj3 <- traj[n==3, ego_id]
 
 ## MULTIPLE IMPUTATION
-id_vars <- c('id','head_race','cds_child_weight')
-outcome_vars <- c('cds_bmi','cds_pcg_srhfairpoor','cds_srhfairpoor','chronic_count','cds_depression')
+weights <- all[, c('id','age','cds_child_weight','year','cds_year','below1k',
+                   'education_exp','childcare_exp','healthcare_exp','housing_exp')]
+id_vars <- c('id','head_race')
+outcome_vars <- c('cds_bmi','cds_pcg_srhfairpoor','cds_srhfairpoor','chronic_count')
                   # 'cds_reading','cds_math','chronic','chronic_count','cds_depression') 
-mech_vars <- c('education_exp','childcare_exp','healthcare_exp','housing_exp',
-               'cds_dr_visits','cds_hospital_visits','cds_parenting_strain','cds_economic_strain')
+mech_vars <- c('cds_dr_visits','cds_hospital_visits','cds_parenting_strain','cds_economic_strain')
 control_vars <- c('male','age','birth_order','married','edu_highest_parent_1',
                   'fam_income_sd','fam_wealth_weq_sd','fam_wealth_noeq_sd')
 all_to_imp <- all[, c(id_vars,outcome_vars,mech_vars,control_vars), with=F]
-missing <- sapply(all_to_imp, function(x) sum(is.na(x))/8070)
+missing <- sapply(all_to_imp, function(x) sum(is.na(x))/dim(all_to_imp)[1])
 missing.dt <- data.table(variable=names(missing), missing_proportion=missing)
 write.csv(missing.dt, paste0(out_dir,'/missing_props.csv'), row.names = F)
-meth <- c('','','','norm','logreg','logreg',
-          'norm','norm',
+meth <- c('','',
+          'norm','logreg','logreg','norm',
           # 'norm','norm','logreg','norm','norm',
-          'norm','norm','norm','norm',
+          # 'norm','norm','norm','norm',
           'norm','norm','norm','norm',
           'logreg','norm','norm','logreg','polr',
-          'norm','norm','norm')
+          '','','')
 names(meth) <- c(id_vars,outcome_vars,mech_vars,control_vars)
 all_to_imp[, cds_srhfairpoor := factor(cds_srhfairpoor, levels=c(0,1))]
 all_to_imp[, cds_pcg_srhfairpoor := factor(cds_pcg_srhfairpoor, levels=c(0,1))]
@@ -153,7 +157,7 @@ all_to_imp[, married := factor(married, levels=c(0,1))]
 mi_list <- mice(all_to_imp, method=meth, m=30, maxit=30)
 df_imp <- as.data.table(mice::complete(mi_list, 'long'))
 imp_list <- mitools::imputationList(lapply(1:30, function(n) mice::complete(mi_list, action=n)))
-saveRDS(list(imp_list, mi_list), paste0(in_dir,'/imputed_input_data2.RDS'))
+saveRDS(list(imp_list, mi_list), paste0(in_dir,'/imputed_input_data4.RDS'))
 all[, cds_pcg_srhfairpoor := as.numeric(cds_pcg_srhfairpoor)]
 all[cds_pcg_srhfairpoor==1, cds_pcg_srhfairpoor := 0]
 all[cds_pcg_srhfairpoor==2, cds_pcg_srhfairpoor := 1]
@@ -186,7 +190,7 @@ fix_weights <- function(d) {
   d[, cds_bmi_sd := scale(cds_bmi), by='agegrp']
   return(d)
 }
-imp_master <- readRDS(paste0(in_dir,'/imputed_input_data2.RDS'))
+imp_master <- readRDS(paste0(in_dir,'/imputed_input_data4.RDS'))
 imp_list <- imp_master[[1]]
 mi_list <- imp_master[[2]]
 imp_list[[1]] <- lapply(imp_list[[1]], fix_weights)
@@ -206,7 +210,7 @@ trends <- rbindlist(lapply(c('cds_bmi','cds_bmi_sd'), get_v_trend))
 trends[outcome=='cds_bmi', outcome := 'Raw BMI']
 trends[outcome=='cds_bmi_sd', outcome := 'BMI age-specific z-score']
 trends[, race := ifelse(race=='black','Black','White')]
-png('C:/Users/ngraetz/Dropbox/Penn/papers/psid/results/health_trends.png',height=12,width=8, units='in',res=600)
+png(paste0('C:/Users/ngraetz/Dropbox/Penn/papers/psid/results/health_trends',Sys.Date(),'.png'),height=12,width=8, units='in',res=600)
 ggplot(data=trends) +
   # geom_errorbar(aes(x=agegrp,
   #                   ymax=upper,ymin=lower,
@@ -422,7 +426,7 @@ lag_var <- function(d,lag_vars) {
   ## Lag any necessary variables
   # for(v in lag_vars) d[, (paste0('l.',v)) := data.table::shift(get(v)), by=c('id')]
   ## Just merge on lagged wealth from "all" above - don't need to re-impute anything (there are 66 observations missing wealth)
-  d <- merge(d, all[,c('id','age','l.fam_wealth_weq_sd','l.fam_income_sd')], by=c('id','age'), all.x=T)
+  # d <- merge(d, all[,c('id','age','l.fam_wealth_weq_sd','l.fam_income_sd','year')], by=c('id','age'), all.x=T)
   ## Make age-specific SD BMI
   d[age<6, agegrp := 3]
   d[age>=6 & age <10, agegrp := 8]
@@ -445,22 +449,25 @@ lag_var <- function(d,lag_vars) {
   ## Add new variables
   d[, college := ifelse(edu_highest_parent_1=='college',1,0)]
   d[, below1k := ifelse(fam_wealth<1000,1,0)]
+  ## Merge back on weights
+  d <- merge(d, weights, by=c('id','age'))
   return(d)
 }
-imp_master <- readRDS(paste0(in_dir,'/imputed_input_data2.RDS'))
+imp_master <- readRDS(paste0(in_dir,'/imputed_input_data4.RDS'))
 imp_list <- imp_master[[1]]
 mi_list <- imp_master[[2]]
 imp_list[[1]] <- lapply(imp_list[[1]], lag_var, lag_vars=c('fam_wealth_weq_sd','fam_income_sd'))
+saveRDS(list(imp_list,mi_list), paste0(in_dir,'/imputed_input_data_for_secure_v2.RDS'))
 
 basic_controls <- 'as.factor(male) + as.factor(head_race) + age + birth_order + as.factor(married) + as.factor(edu_highest_parent_1) + fam_income_sd'
 iv_vars <- c('fam_wealth_weq_sd')
 use_weights <- TRUE
-res <- FALSE
-file_tag <- 'svyweights_no_income'
+res <- TRUE
+file_tag <- 'inc_tas_res'
 # missing <- sapply(imp_list[[1]][[1]], function(x) sum(is.na(x)))
 outcome_vars <- c("cds_bmi","cds_bmi_sd","cds_pcg_srhfairpoor","cds_srhfairpoor")
-outcome_vars <- 'cds_parenting_strain'
-outcome_vars <- c("cds_pcg_srhfairpoor","cds_srhfairpoor")
+# outcome_vars <- 'cds_parenting_strain'
+# outcome_vars <- c("cds_pcg_srhfairpoor","cds_srhfairpoor")
 ## Lumley on weights and REs: https://stats.stackexchange.com/questions/89204/fitting-multilevel-models-to-complex-survey-data-in-r
 mech_vars <- c('b_education_exp','b_childcare_exp','b_healthcare_exp','b_housing_exp',
                'cds_dr_visits','cds_hospital_visits','cds_parenting_strain','cds_economic_strain')
@@ -501,7 +508,7 @@ if(outcome %in% c('cds_bmi','cds_bmi_sd','cds_parenting_strain','cds_depression'
       }
       if(res) {
         # m1 <- pool(with(mi_list, lme4::lmer(as.formula(paste0(f1,' + (1|id)')),weights = cds_child_weight)))
-        m1 <- pool(with(imp_list, lme4::lmer(as.formula(paste0(f1,' + (1|id)')), weights=cds_child_weight)))
+        m1 <- pool(with(imp_list, lme4::lmer(as.formula(paste0(f1,' + (1|id)')))))
       }
     }
     return(m1)
@@ -644,7 +651,7 @@ ft <- flextable(coefs, theme_fun = theme_booktabs) %>%
 
 setwd('C:/Users/ngraetz/Dropbox/Penn/papers/psid/results/')
 pgwidth=11
-ft_out <- width(ft, width = dim(ft_out)$widths*10/(flextable_dim(ft_out)$widths))
+ft_out <- width(ft, width = dim(ft)$widths*10/(flextable_dim(ft)$widths))
 doc <- read_docx() %>%
   body_add_flextable(value = ft_out) %>%
   body_end_section_landscape() %>% # a landscape section is ending here

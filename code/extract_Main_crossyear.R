@@ -12,7 +12,7 @@ out_dir <- 'C:/Users/ngraetz/Dropbox/Penn/papers/psid/data/'
 pull_main_wave <- function(y, cb) {
   message(paste0('Extracting ', y, '...'))
   ## Load full data and codebook.
-  full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"codebook_main_file_v5.xlsx"),sheet = 'Sheet1')) 
+  full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"codebook_main_file_v6.xlsx"),sheet = 'Sheet1')) 
   # full_cb <- full_cb[!(var_rename %in% c('wealth','debt')) & wave==y, ]
   full_cb <- full_cb[wave==y, ]
   setnames(full_cb, 'wave', 'year')
@@ -73,7 +73,7 @@ pull_main_wave <- function(y, cb) {
 ## Extract each year of TAS survey.
 main_years <- c(1994,1999,2001,2003,2005,2007,2009,2011,2013,2015,2017)
 d <- fread(paste0(in_dir,'crossyear.csv'))
-full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"codebook_main_file_v5.xlsx"), sheet = 'Sheet1')) 
+full_cb <- as.data.table(readxl::read_excel(paste0(in_dir,"codebook_main_file_v6.xlsx"), sheet = 'Sheet1')) 
 full_cb[, var := gsub(' ','',var)]
 
 ################################################################################################################
@@ -83,15 +83,19 @@ full_cb[, var := gsub(' ','',var)]
 ## ADDENDUM 1: 'childcare_exp','childcare_exp','childcare_exp','marital_status','family_size'
 d_add <- fread(paste0(in_dir, '/J269055.csv'))
 update_vars <- full_cb[var_rename %in% c('childcare_exp','healthcare_exp','education_exp','housing_exp','marital_status','family_size'), var]
-d <- merge(d, d_add[, c('ER30001','ER30002',update_vars), with=F], by=c('ER30001','ER30002'))
+d <- merge(d, d_add[, c('ER30001','ER30002',update_vars), with=F], by=c('ER30001','ER30002'), all.x=T)
 ## ADDENDUM 2: 'fam_income'
 d_add <- fread(paste0(in_dir, '/J268860.csv'))
 update_vars <- full_cb[var_rename %in% c('fam_income'), var]
-d <- merge(d, d_add[, c('ER30001','ER30002',update_vars), with=F], by=c('ER30001','ER30002'))
+d <- merge(d, d_add[, c('ER30001','ER30002',update_vars), with=F], by=c('ER30001','ER30002'), all.x=T)
 ## ADDENDUM 3: 'fam_wealth_noeq'
 d_add <- fread(paste0(in_dir, '/J268894.csv'))
 update_vars <- full_cb[var_rename %in% c('fam_wealth_noeq'), var]
-d <- merge(d, d_add[, c('ER30001','ER30002',update_vars), with=F], by=c('ER30001','ER30002'))
+d <- merge(d, d_add[, c('ER30001','ER30002',update_vars), with=F], by=c('ER30001','ER30002'), all.x=T)
+## ADDENDUM 4: 'own_rent','fam_debt'
+d_add <- fread(paste0(in_dir, '/J273645.csv'))
+update_vars <- full_cb[var_rename %in% c('own_rent','fam_debt'), var]
+d <- merge(d, d_add[, c('ER30001','ER30002',update_vars), with=F], by=c('ER30001','ER30002'), all.x=T)
 ################################################################################################################
 
 ## EXTRACT ALL
@@ -134,5 +138,5 @@ all[year==2013, fam_income := fam_income*232.957/244.979]
 all[year==2015, fam_income := fam_income*236.525/244.979]
 all[year==2017, fam_income := fam_income*244.979/244.979]
 ## SAVE CLEAN DATASET
-write.csv(all, paste0(out_dir, 'individual_family2.csv'), row.names = F)
+write.csv(all, paste0(out_dir, 'individual_family3.csv'), row.names = F)
 

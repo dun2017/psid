@@ -108,17 +108,26 @@ d3 <- fread(paste0(in_dir,'J269640.csv'))
 update_vars <- full_cb[var_rename %in% c('child_weight'), var]
 d3 <- d3[, c('ER30001','ER30002',update_vars), with=F]
 d <- merge(d, d3, by=c('ER30001','ER30002'))
+## ADDENDUM 4: exercise, sleep, diet, school/social missed for illness
+d4 <- fread(paste0(in_dir,'J273638.csv'))
+update_vars <- full_cb[var_rename %in% c('exercise_school','exercise_home','fruit_days','veggie_days','school_days_missed'), var]
+d4 <- d4[, c('ER30001','ER30002',update_vars), with=F]
+d <- merge(d, d4, by=c('ER30001','ER30002'))
 ################################################################
 
 all <- rbindlist(lapply(main_years, pull_main_wave), fill=T)
 ## FIX CDS YEAR DISCREPANCIES
-all[year==1997, year := 1999]
-all[year==2002, year := 2001]
-all[year==2014, year := 2013]
-write.csv(all, paste0(out_dir, 'cds.csv'), row.names = F)
+all[year==1997, main_year := 1994]
+all[year==2002, main_year := 1999]
+all[year==2007, main_year := 2005]
+all[year==2014, main_year := 2013]
+setnames(all, 'year', 'cds_year')
+setnames(all, 'main_year', 'year')
+## FIX CERTAIN AGE-SPECIFIC VARS
+write.csv(all, paste0(out_dir, 'cds_v3.csv'), row.names = F)
 
 # all <- fread('//sas/psc/dept/cboen_Proj/PSID/CLEAN_DATA/individual_family.csv')
 # all[, id := ER30001*1000+ER30002]
 # all[, n := .N, by='id']
-table(all[, c('year','bmi')], useNA = 'always')
-all[, mean(economic_strain,na.rm=T), by='year']
+# table(all[, c('year','bmi')], useNA = 'always')
+# all[, mean(economic_strain,na.rm=T), by='year']

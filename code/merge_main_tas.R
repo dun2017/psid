@@ -44,12 +44,23 @@ all <- merge(all, main[, c('year','id',main_tas_vars), with=F], by=c('year','id'
 cds <- fread(paste0(in_dir,"cds.csv"))
 cds[, id := ER30001*1000+ER30002]
 original_tas_cohort <- cds[year==1999, id]
-all <- all[id %in% original_tas_cohort & year>=2005, ]
+all <- all[id %in% original_tas_cohort & year>=2005, ] ## Might want to also drop 2017, as that is a new sample
 
 ## Merge some relative variables
 all <- merge_relative_data(all, # Can be any dataset that is long on "year", "ER30001", "ER30002"
                            relation='sibling', # Can be any value in "rel_ego_alter" in the clean relations matrix
                            relation_vars=c('ever_institute')) # Can be any variable in the clean individual-family file
+## Keep a "primary sibling" (whoever contributes the most person-years of overlap)
+for(i in 1:10) all[, (paste0('sibling_py_',i)) := sum(!is.na(get(paste0('male_sibling_',i)))), by='id']
+test <- unique(all[, c('id',paste0('sibling_py_',1:10)), with=F])
+test <- melt(test, id.vars = 'id')
+test[, target_sib := tstrsplit(variable,'_',keep=3)]
+test[, max_sib := ifelse(value==max(value), target_sib, NA), by='id']
+test[, max_sib := min(max_sib,na.rm=T), by='id'] ## Arbitrarily keep one sibling if multiple are contributing max person-years
+test <- unique(test[, c('id','max_sib')])
+all <- merge(all, test, by='id')
+for(i in 1:10) all[max_sib==i, primary_sibling_male := get(paste0('male_sibling_',i))]
+
 all <- merge_relative_data(all, # Can be any dataset that is long on "year", "ER30001", "ER30002"
                            relation='parent', # Can be any value in "rel_ego_alter" in the clean relations matrix
                            relation_vars=c('edu_highest')) # Can be any variable in the clean individual-family file
